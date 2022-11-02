@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import httpx
 
 from . import errors
+from .model import parse_data, InstantVector, Scalar
 
 DEFAULT_USER_AGENT = 'Python Aio Prometheus Client'
 TIMEOUT = 10 * 60
@@ -36,8 +37,20 @@ class PrometheusClient:
             r.raise_for_status()
             data = r.json()
 
-        return data['data']['result']
+        if data['status'] != 'success':
+            raise ValueError('invalid data: %s' % data)
+
+        return parse_data(data['data'])
 
     async def query_value(self, metric):
         data = await self.query(metric)
-        return float(data[0]['value'][1])
+        if isinstance(data, InstantVector):
+            series_count = len(data.series)
+            if series_count != 1:
+                raise ValueError('series count incorrect: %d' % series_count)
+
+            return data.series[0].value.value
+        elif isinstance(data, Scalar):
+            return data.value
+        else:
+            raise TypeError('unknown data type: %s' % type(data))
