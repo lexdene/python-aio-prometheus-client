@@ -3,7 +3,10 @@ from urllib.parse import urljoin
 
 import httpx
 
+from . import errors
+
 DEFAULT_USER_AGENT = 'Python Aio Prometheus Client'
+TIMEOUT = 10 * 60
 
 
 class PrometheusClient:
@@ -13,14 +16,22 @@ class PrometheusClient:
 
     async def query(self, metric):
         async with httpx.AsyncClient() as client:
-            r = await client.get(
-                urljoin(self.base_url, 'api/v1/query'),
-                params={
-                    'query': metric,
-                    'time': str(time.time())
-                },
-                headers={'User-Agent': self.user_agent},
-            )
+            try:
+                r = await client.get(
+                    urljoin(self.base_url, 'api/v1/query'),
+                    params={
+                        'query': metric,
+                        'time': str(time.time())
+                    },
+                    headers={'User-Agent': self.user_agent},
+                    timeout=TIMEOUT,
+                )
+            except Exception as e:
+                raise errors.PrometheusConnectionError('request fail') from e
+
+            if r.status_code == 400:
+                data = r.json()
+                raise errors.PrometheusMeticError(r.status_code, data)
 
             r.raise_for_status()
             data = r.json()
