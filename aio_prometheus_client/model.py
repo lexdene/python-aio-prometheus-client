@@ -48,5 +48,5 @@ def parse_data(data):
 
     if result_type == 'scalar':
         return Scalar.from_data(result)
-    elif result_type == "vector":
+    elif result_type == 'vector':
         return InstantVector.from_data(result)
