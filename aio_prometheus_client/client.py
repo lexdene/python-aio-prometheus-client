@@ -37,7 +37,7 @@ class PrometheusClient:
         if data['status'] != 'success':
             raise ValueError('invalid data: %s' % data)
 
-        return data
+        return data['data']
 
     async def query(self, metric, time=0):
         if not time:
@@ -51,7 +51,7 @@ class PrometheusClient:
             }
         )
 
-        return parse_data(data['data'])
+        return parse_data(data)
 
     async def query_value(self, metric):
         data = await self.query(metric)
@@ -65,3 +65,25 @@ class PrometheusClient:
             return data.value
         else:
             raise TypeError('unknown data type: %s' % type(data))
+
+    async def query_range(self, metric, start, end, step=None, step_count=60):
+        if step is None:
+            if start >= end:
+                raise ValueError('end must be greater than start')
+
+            step = (end - start) / step_count
+            if step < 1:
+                step = 1
+            else:
+                step = int(step)
+
+        data = await self._request(
+            path='api/v1/query_range',
+            params={
+                'query': metric,
+                'start': start,
+                'end': end,
+                'step': step,
+            }
+        )
+        return parse_data(data)
