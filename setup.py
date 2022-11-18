@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='aio-prometheus-client',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(include=['aio_prometheus_client']),
     python_requires='>3.10.0',
 
