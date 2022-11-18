@@ -1,4 +1,4 @@
-import time
+from time import time as get_current_timestamp
 from urllib.parse import urljoin
 
 import httpx
@@ -15,15 +15,12 @@ class PrometheusClient:
         self.base_url = base_url
         self.user_agent = user_agent
 
-    async def query(self, metric):
+    async def _request(self, path, params=None):
         async with httpx.AsyncClient() as client:
             try:
                 r = await client.get(
-                    urljoin(self.base_url, 'api/v1/query'),
-                    params={
-                        'query': metric,
-                        'time': str(time.time())
-                    },
+                    urljoin(self.base_url, path),
+                    params=params,
                     headers={'User-Agent': self.user_agent},
                     timeout=TIMEOUT,
                 )
@@ -39,6 +36,20 @@ class PrometheusClient:
 
         if data['status'] != 'success':
             raise ValueError('invalid data: %s' % data)
+
+        return data
+
+    async def query(self, metric, time=0):
+        if not time:
+            time = get_current_timestamp()
+
+        data = await self._request(
+            path='api/v1/query',
+            params={
+                'query': metric,
+                'time': str(time)
+            }
+        )
 
         return parse_data(data['data'])
 
