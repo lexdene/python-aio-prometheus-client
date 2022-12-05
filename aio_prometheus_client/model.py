@@ -9,9 +9,13 @@ class Scalar:
 
     @classmethod
     def from_data(cls, data):
+        value = data[1]
+        if value != 'NaN':
+            value = float(value)
+
         return cls(
             timestamp=data[0],
-            value=float(data[1])
+            value=value,
         )
 
 
