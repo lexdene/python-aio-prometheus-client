@@ -1,21 +1,29 @@
 from time import time as get_current_timestamp
 from urllib.parse import urljoin
+from typing import Optional, Any, Union
 
 import httpx
 
 from . import errors
-from .model import parse_data, InstantVector, Scalar
+from .model import parse_data, InstantVector, Scalar, RangeVector
 
 DEFAULT_USER_AGENT = 'Python Aio Prometheus Client'
 TIMEOUT = 10 * 60
 
 
 class PrometheusClient:
-    def __init__(self, base_url, user_agent=DEFAULT_USER_AGENT):
+    base_url: str
+    user_agent: str
+
+    def __init__(self, base_url: str, user_agent: str = DEFAULT_USER_AGENT):
         self.base_url = base_url
         self.user_agent = user_agent
 
-    async def _request(self, path, params=None):
+    async def _request(
+        self,
+        path: str,
+        params: Optional[dict[str, Union[str, int, float]]] = None
+    ) -> dict[str, Any]:
         async with httpx.AsyncClient() as client:
             try:
                 r = await client.get(
@@ -39,11 +47,13 @@ class PrometheusClient:
 
         return data['data']
 
-    async def query(self, metric, time=0):
+    async def query(
+        self, metric: str, time: float = 0
+    ) -> Union[Scalar, InstantVector]:
         if not time:
             time = get_current_timestamp()
 
-        data = await self._request(
+        data: dict[str, Any] = await self._request(
             path='api/v1/query',
             params={
                 'query': metric,
@@ -53,7 +63,7 @@ class PrometheusClient:
 
         return parse_data(data)
 
-    async def query_value(self, metric):
+    async def query_value(self, metric: str) -> float:
         data = await self.query(metric)
         if isinstance(data, InstantVector):
             series_count = len(data.series)
@@ -66,7 +76,10 @@ class PrometheusClient:
         else:
             raise TypeError('unknown data type: %s' % type(data))
 
-    async def query_range(self, metric, start, end, step=None, step_count=60):
+    async def query_range(
+        self, metric: str, start: float, end: float,
+        step: Optional[float] = None, step_count: int = 60
+    ) -> RangeVector:
         if step is None:
             if start >= end:
                 raise ValueError('end must be greater than start')
@@ -77,7 +90,7 @@ class PrometheusClient:
             else:
                 step = int(step)
 
-        data = await self._request(
+        data: dict[str, Any] = await self._request(
             path='api/v1/query_range',
             params={
                 'query': metric,
@@ -86,4 +99,11 @@ class PrometheusClient:
                 'step': step,
             }
         )
-        return parse_data(data)
+
+        result_type = data['resultType']
+        result = data['result']
+
+        if result_type != 'matrix':
+            raise ValueError('unexpected result type: %s' % result_type)
+
+        return RangeVector.from_data(result)
