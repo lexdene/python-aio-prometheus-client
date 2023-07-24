@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import Any, Union
 
 
 @dataclass
@@ -8,7 +8,7 @@ class Scalar:
     value: float
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: tuple[float, float]) -> 'Scalar':
         return cls(
             timestamp=data[0],
             value=float(data[1])
@@ -17,11 +17,11 @@ class Scalar:
 
 @dataclass
 class InstantSeries:
-    metric: dict
+    metric: dict[str, str]
     value: Scalar
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict[str, Any]) -> 'InstantSeries':
         return cls(
             metric=data['metric'],
             value=Scalar.from_data(data['value'])
@@ -30,10 +30,10 @@ class InstantSeries:
 
 @dataclass
 class InstantVector:
-    series: List[InstantSeries]
+    series: list[InstantSeries]
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: list[dict[str, Any]]) -> 'InstantVector':
         return cls(
             series=[
                 InstantSeries.from_data(i)
@@ -44,11 +44,11 @@ class InstantVector:
 
 @dataclass
 class RangeSeries:
-    metric: dict
-    values: List[Scalar]
+    metric: dict[str, str]
+    values: list[Scalar]
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict[str, Any]) -> 'RangeSeries':
         return cls(
             metric=data['metric'],
             values=[
@@ -60,10 +60,10 @@ class RangeSeries:
 
 @dataclass
 class RangeVector:
-    series: List[RangeSeries]
+    series: list[RangeSeries]
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: list[dict[str, Any]]) -> 'RangeVector':
         return cls(
             series=[
                 RangeSeries.from_data(i)
@@ -72,7 +72,9 @@ class RangeVector:
         )
 
 
-def parse_data(data):
+def parse_data(
+    data: dict[str, Any]
+) -> Union[Scalar, InstantVector]:
     result_type = data['resultType']
     result = data['result']
 
@@ -80,7 +82,5 @@ def parse_data(data):
         return Scalar.from_data(result)
     elif result_type == 'vector':
         return InstantVector.from_data(result)
-    elif result_type == 'matrix':
-        return RangeVector.from_data(result)
 
-    raise ValueError('no such type: %s' % result_type)
+    raise ValueError('unexpected result type: %s' % result_type)
