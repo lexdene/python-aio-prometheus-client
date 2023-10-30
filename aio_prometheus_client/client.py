@@ -1,6 +1,6 @@
 from time import time as get_current_timestamp
 from urllib.parse import urljoin
-from typing import Optional, Any, Union
+from typing import Optional, Any, Union, TypedDict
 
 import httpx
 
@@ -9,6 +9,11 @@ from .model import parse_data, InstantVector, Scalar, RangeVector
 
 DEFAULT_USER_AGENT = 'Python Aio Prometheus Client'
 TIMEOUT = 10 * 60
+
+
+class PromJsonData(TypedDict):
+    status: str
+    data: dict[str, Any]
 
 
 class PrometheusClient:
@@ -24,6 +29,8 @@ class PrometheusClient:
         path: str,
         params: Optional[dict[str, Union[str, int, float]]] = None
     ) -> dict[str, Any]:
+        data: PromJsonData
+
         async with httpx.AsyncClient() as client:
             try:
                 r = await client.get(
@@ -36,8 +43,8 @@ class PrometheusClient:
                 raise errors.PrometheusConnectionError('request fail') from e
 
             if r.status_code == 400:
-                data = r.json()
-                raise errors.PrometheusMeticError(r.status_code, data)
+                err_data = r.json()
+                raise errors.PrometheusMeticError(r.status_code, err_data)
 
             r.raise_for_status()
             data = r.json()
