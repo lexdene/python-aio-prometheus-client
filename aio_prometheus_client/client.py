@@ -10,6 +10,7 @@ from .model import parse_data, InstantVector, Scalar, RangeVector
 DEFAULT_USER_AGENT = 'Python Aio Prometheus Client'
 TIMEOUT = 10 * 60
 
+
 class PromJsonData(TypedDict):
     status: str
     data: dict[str, Any]
