@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='aio-prometheus-client',
-    version='0.1.0',
+    version='0.1.1',
     packages=find_packages(include=['aio_prometheus_client']),
     package_data={
         'aio_prometheus_client': ['py.typed'],
